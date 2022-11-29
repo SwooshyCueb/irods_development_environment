@@ -1,19 +1,29 @@
+# syntax=docker/dockerfile:1.2
+
 FROM ubuntu:16.04
 
 SHELL [ "/bin/bash", "-c" ]
-
 ENV DEBIAN_FRONTEND=noninteractive
 
+# Re-enable apt caching for RUN --mount
+RUN rm -f /etc/apt/apt.conf.d/docker-clean && \
+    echo 'Binary::apt::APT::Keep-Downloaded-Packages "true";' > /etc/apt/apt.conf.d/keep-cache
+
 # Make sure we're starting with an up-to-date image
-RUN apt-get update && \
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    apt-get update && \
     apt-get upgrade -y && \
     apt-get autoremove -y --purge && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/* /tmp/*
+    rm -rf /tmp/*
 # To mark all installed packages as manually installed:
 #apt-mark showauto | xargs -r apt-mark manual
 
-RUN apt-get update && \
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    --mount=type=cache,target=/root/.cache/pip,sharing=locked \
+    --mount=type=cache,target=/root/.cache/wheel,sharing=locked \
+    apt-get update && \
     apt-get install -y \
         apt-transport-https \
         ccache \
@@ -56,28 +66,28 @@ RUN apt-get update && \
         wget \
         zlib1g-dev \
     && \
-    pip --no-cache-dir install --upgrade 'pip<21.0' && \
-    pip --no-cache-dir install \
+    pip install --upgrade 'pip<21.0' && \
+    pip install \
         distro \
     && \
-    pip3 --no-cache-dir install \
+    pip3 install \
         distro \
         lief==0.10.1 \
     && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/* /tmp/*
+    rm -rf /tmp/*
 
 RUN wget -qO - https://packages.irods.org/irods-signing-key.asc | apt-key add - && \
     echo "deb [arch=amd64] https://packages.irods.org/apt/ $(lsb_release -sc) main" | tee /etc/apt/sources.list.d/renci-irods.list && \
     wget -qO - https://core-dev.irods.org/irods-core-dev-signing-key.asc | apt-key add - && \
     echo "deb [arch=amd64] https://core-dev.irods.org/apt/ $(lsb_release -sc) main" | tee /etc/apt/sources.list.d/renci-irods-core-dev.list
 
-RUN apt-get update && \
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    apt-get update && \
     apt-get install -y \
         'irods-externals*' \
     && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/* /tmp/*
+    rm -rf /tmp/*
 
 ARG cmake_path="/opt/irods-externals/cmake3.11.4-0/bin"
 ENV PATH=${cmake_path}:$PATH
@@ -89,6 +99,5 @@ ENV file_extension="deb"
 ENV package_manager="apt-get"
 ENV CCACHE_DIR="/irods_build_cache"
 
-COPY build_and_copy_packages_to_dir.sh /
-RUN chmod u+x /build_and_copy_packages_to_dir.sh
+COPY --chmod=755 build_and_copy_packages_to_dir.sh /
 ENTRYPOINT ["./build_and_copy_packages_to_dir.sh"]

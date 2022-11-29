@@ -1,16 +1,22 @@
+# syntax=docker/dockerfile:1.2
+
 ARG debugger_base=ubuntu:16.04
 FROM ${debugger_base}
 
 SHELL [ "/bin/bash", "-c" ]
-
 ENV DEBIAN_FRONTEND=noninteractive
 
+# Re-enable apt caching for RUN --mount
+RUN rm -f /etc/apt/apt.conf.d/docker-clean && \
+    echo 'Binary::apt::APT::Keep-Downloaded-Packages "true";' > /etc/apt/apt.conf.d/keep-cache
+
 # Make sure we're starting with an up-to-date image
-RUN apt-get update && \
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    apt-get update && \
     apt-get upgrade -y && \
     apt-get autoremove -y --purge && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/* /tmp/*
+    rm -rf /tmp/*
 # To mark all installed packages as manually installed:
 #apt-mark showauto | xargs -r apt-mark manual
 
@@ -24,7 +30,9 @@ WORKDIR /tmp
 #--------
 # gdb
 
-RUN apt-get update && \
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    apt-get update && \
     apt-get install -y \
         texinfo \
         libncurses5-dev \
@@ -40,8 +48,7 @@ RUN apt-get update && \
         python3-pexpect \
     && \
     apt-get remove -y python3-dev && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/* /tmp/*
+    rm -rf /tmp/*
 
 ARG gdb_version="8.3.1"
 
@@ -58,13 +65,14 @@ RUN wget "http://ftp.gnu.org/gnu/gdb/gdb-${gdb_version}.tar.gz" && \
 #--------
 # rr
 
-RUN apt-get update && \
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    apt-get update && \
     apt-get install -y \
         python3-urllib3 \
         binutils \
     && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/* /tmp/*
+    rm -rf /tmp/*
 
 ARG rr_version="5.5.0"
 
@@ -91,7 +99,9 @@ RUN wget "https://sourceware.org/pub/valgrind/valgrind-${valgrind_version}.tar.b
 
 ARG lldb_version="12"
 
-RUN apt-get update && \
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    apt-get update && \
     apt-get install -y \
         apt-transport-https \
     && \
@@ -101,18 +111,18 @@ RUN apt-get update && \
     apt-get install -y \
         lldb-${lldb_version} \
     && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/* /tmp/*
+    rm -rf /tmp/*
 
 #--------
 # utils
 
-RUN apt-get update && \
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    apt-get update && \
     apt-get install -y \
         tmux \
         vim \
         nano \
         tig \
     && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/* /tmp/*
+    rm -rf /tmp/*
