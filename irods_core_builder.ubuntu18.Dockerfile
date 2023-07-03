@@ -107,6 +107,21 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     && \
     rm -rf /tmp/*
 
+ARG IRODSUSER_UID=1000
+ARG IRODSUSER_GID=1000
+RUN groupadd --gid $IRODSUSER_GID \
+        --non-unique \
+        irodsuser && \
+    useradd --uid $IRODSUSER_UID \
+        --non-unique \
+        --no-user-group \
+        --gid irodsuser \
+        --groups sys,adm,kmem,sudo,users \
+        --create-home \
+        --shell /bin/bash \
+        irodsuser && \
+    echo "irodsuser ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
+
 ARG cmake_path="/opt/irods-externals/cmake3.21.4-0/bin"
 ENV PATH=${cmake_path}:$PATH
 

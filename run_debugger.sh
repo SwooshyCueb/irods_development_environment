@@ -1,5 +1,7 @@
 #!/bin/bash -e
 
+set -x
+
 volumes_file=""
 dry_run=""
 do_source_build="."
@@ -9,10 +11,13 @@ runner_run="y"
 OS_NAME="ubuntu18"
 DEVROOT=""
 NO_CACHE=""
+BUILDER_OPTIONS=""
 BUILD_OPTIONS=""
 DOCKER_OPTIONS="
                  -d -i -t "
 RUNNER_SHM="256m"
+INTERNAL_UID="$(id -u)"
+INTERNAL_GID="$(id -g)"
 DEBUG_OPTIONS="
                  --cap-add=SYS_PTRACE
                  --security-opt seccomp=unconfined
@@ -63,10 +68,15 @@ while [[ $1 = -* ]]; do
         -m|--runner-shm) RUNNER_SHM="$2"; shift;;
         -j|--jobs) BUILD_OPTIONS+=" --jobs $2"; shift;;
         -P|--port) DOCKER_OPTIONS+=" -p $2"; shift;;
+        --uid) INTERNAL_UID="$2"; shift;;
+        --gid) INTERNAL_GID="$2"; shift;;
         *) usage bad option "'$1'" ;;
     esac
     shift
 done
+
+BUILDER_OPTIONS+=" --build-arg IRODSUSER_UID=${INTERNAL_UID}"
+BUILDER_OPTIONS+=" --build-arg IRODSUSER_GID=${INTERNAL_GID}"
 
 declare -A Os_Map=( ['ubuntu16']='ubuntu:16.04'
                     ['ubuntu18']='ubuntu:18.04'
@@ -161,20 +171,20 @@ else
     build_dir=$(dirname "$0")
     cd "$build_dir" || { echo >&2 "cannot cd to docker build environment"; exit 2; }
     if [ -e "${DEBUGGER_DOCKERFILE}" ]; then
-        DOCKER_BUILDKIT=1 BUILDKIT_PROGRESS=plain docker build --build-arg debugger_base=${base_image}  -f "${DEBUGGER_DOCKERFILE}" -t "${DEBUGGER_IMAGE}" . ${NO_CACHE}
+        DOCKER_BUILDKIT=1 BUILDKIT_PROGRESS=plain docker build --build-arg debugger_base=${base_image} ${BUILDER_OPTIONS} -f "${DEBUGGER_DOCKERFILE}" -t "${DEBUGGER_IMAGE}" . ${NO_CACHE}
         RUNNER_BASE="${DEBUGGER_IMAGE}"
     else
         RUNNER_BASE="${base_image}"
     fi
     if [ -n "$builder_build" ] || [ -n "$do_source_build" ]; then
-        DOCKER_BUILDKIT=1 BUILDKIT_PROGRESS=plain docker build -t "${BUILDER_IMAGE}" -f "${BUILDER_DOCKERFILE}" . ${NO_CACHE}
+        DOCKER_BUILDKIT=1 BUILDKIT_PROGRESS=plain docker build ${BUILDER_OPTIONS} -t "${BUILDER_IMAGE}" -f "${BUILDER_DOCKERFILE}" . ${NO_CACHE}
     fi
     if [ -n "$do_source_build" ]; then
         docker run --rm "${vol_mounts[@]}" -it -e "TERM=$TERM" "${BUILDER_IMAGE}" ${do_source_build:1} ${BUILD_OPTIONS}
     fi
     if [ -e "${RUNNER_DOCKERFILE}" ]; then
         if [ -n "$runner_build" ]; then
-            DOCKER_BUILDKIT=1 BUILDKIT_PROGRESS=plain docker build --build-arg runner_base="${RUNNER_BASE}" -t "${RUNNER_IMAGE}" -f "${RUNNER_DOCKERFILE}" . ${NO_CACHE}
+            DOCKER_BUILDKIT=1 BUILDKIT_PROGRESS=plain docker build --build-arg runner_base="${RUNNER_BASE}" ${BUILDER_OPTIONS} -t "${RUNNER_IMAGE}" -f "${RUNNER_DOCKERFILE}" . ${NO_CACHE}
         fi
         if [ -n "$runner_run" ]; then
             echo -n "$((RUNNER_INT+1))" > "${RUNNER_INT_FILE}"

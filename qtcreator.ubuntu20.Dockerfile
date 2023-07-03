@@ -73,14 +73,38 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
 #--------
 # lldb
 
-ARG lldb_version="12"
+ARG lldb_version="13"
 
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt,sharing=locked \
     apt-get update && \
     apt-get install -y \
+        apt-transport-https \
+    && \
+    wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key > /etc/apt/trusted.gpg.d/apt.llvm.org.asc && \
+    echo "deb https://apt.llvm.org/focal/ llvm-toolchain-focal-${lldb_version} main" > "/etc/apt/sources.list.d/llvm-toolchain-focal-${lldb_version}.list" && \
+    apt-get update && \
+    apt-get install -y \
         lldb-${lldb_version} \
     && \
+    update-alternatives --install /usr/bin/lldb lldb /usr/bin/lldb-${lldb_version} 1 && \
+    hash -r && \
+    rm -rf /tmp/*
+
+#--------
+# clangd
+
+ARG clangd_version="15"
+
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    echo "deb https://apt.llvm.org/focal/ llvm-toolchain-focal-${clangd_version} main" > "/etc/apt/sources.list.d/llvm-toolchain-focal-${clangd_version}.list" && \
+    apt-get update && \
+    apt-get install -y \
+        clangd-${clangd_version} \
+    && \
+    update-alternatives --install /usr/bin/clangd clangd /usr/bin/clangd-${clangd_version} 1 && \
+    hash -r && \
     rm -rf /tmp/*
 
 #--------
@@ -168,6 +192,21 @@ RUN update-alternatives --install /usr/local/bin/gcc gcc /usr/bin/gcc-10 1 && \
     hash -r
 
 COPY ICAT.sql /
+
+ARG IRODSUSER_UID=1000
+ARG IRODSUSER_GID=1000
+RUN groupadd --gid $IRODSUSER_GID \
+        --non-unique \
+        irodsuser && \
+    useradd --uid $IRODSUSER_UID \
+        --non-unique \
+        --no-user-group \
+        --gid irodsuser \
+        --groups sys,adm,kmem,sudo,users \
+        --create-home \
+        --shell /bin/bash \
+        irodsuser && \
+    echo "irodsuser ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
 
 # These should be overridden in qtcreator
 ENV CCACHE_DIR="/var/cache/ccache-irods"
