@@ -1,4 +1,5 @@
 #!/bin/bash -e
+set -x
 
 volumes_file=""
 dry_run=""
@@ -71,6 +72,7 @@ while [[ $1 = -* ]]; do
         -j|--jobs) BUILD_OPTIONS+=" --jobs $2"; shift;;
         -P|--port) DOCKER_OPTIONS+=" -p $2"; shift;;
         --runner-mount-cgroup) runner_mount_cgroup="y";;
+        --icommands-only) BUILD_OPTIONS+=" --icommands-only";;
         *) usage bad option "'$1'" ;;
     esac
     shift
@@ -188,6 +190,7 @@ if [ -n "$runner_systemd" ]; then
 fi
 
 if [ -n "$dry_run" ]; then  # -- print mount options for the debugger run
+    set +x
     echo "--- using OS_NAME='$OS_NAME' base_image='$base_image' ---"
     if [ -e "${DEBUGGER_DOCKERFILE}" ]; then
         echo "    DEBUGGER_IMAGE:   '${DEBUGGER_IMAGE}'"
@@ -208,6 +211,7 @@ if [ -n "$dry_run" ]; then  # -- print mount options for the debugger run
                 "\nDEBUG_OPTIONS:${DEBUG_OPTIONS}" \
                 "\nRUNNER_ARGS:${RUNNER_ARGS}"
     fi
+    set -x
     exit 1
 else
     build_dir=$(dirname "$0")

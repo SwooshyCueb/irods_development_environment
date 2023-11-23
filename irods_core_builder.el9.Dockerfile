@@ -91,6 +91,15 @@ RUN --mount=type=cache,target=/var/cache/dnf,sharing=locked \
         unixODBC-devel \
         flex \
         bison \
+        globus-gridftp-server-progs \
+        globus-simple-ca \
+        globus-gass-copy-progs \
+        globus-common-devel \
+        globus-gridftp-server-devel \
+        globus-gridmap-callout-error-devel \
+        globus-gss-assist-devel \
+        globus-gsi-cert-utils-progs \
+        globus-proxy-utils \
     && \
     rm -rf /tmp/*
 

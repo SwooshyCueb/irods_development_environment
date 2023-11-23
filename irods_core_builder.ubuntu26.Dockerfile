@@ -101,6 +101,15 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
         zlib1g-dev \
         flex \
         bison \
+        globus-gridftp-server-progs \
+        globus-simple-ca \
+        globus-gass-copy-progs \
+        libglobus-common-dev \
+        libglobus-gridftp-server-dev \
+        libglobus-gridmap-callout-error-dev \
+        libglobus-gss-assist-dev \
+        globus-gsi-cert-utils-progs \
+        globus-proxy-utils \
     && \
     rm -rf /tmp/*
 

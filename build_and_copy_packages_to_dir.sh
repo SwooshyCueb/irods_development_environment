@@ -88,7 +88,7 @@ debug_config="-DCMAKE_BUILD_TYPE=Release"
 enable_asan="-DIRODS_ENABLE_ADDRESS_SANITIZER=NO"
 custom_externals=""
 include_unit_tests=1
-unit_test_config="-DIRODS_UNIT_TESTS_BUILD=YES -DIRODS_UNIT_TESTS_ENABLE_ALL=YES"
+unit_test_config="-DIRODS_UNIT_TESTS_BUILD=YES -DIRODS_UNIT_TESTS_ENABLE_ALL=YES -DIRODS_ENABLE_ALL_TESTS=YES"
 include_microservice_tests=1
 msi_test_config="-DIRODS_MICROSERVICE_TEST_PLUGINS_BUILD=YES"
 enable_all_tests=0
@@ -97,6 +97,8 @@ all_tests_config=""
 common_cmake_args=(
     -DCMAKE_COLOR_MAKEFILE=ON
     -DCMAKE_VERBOSE_MAKEFILE=ON
+    -DIRODS_BUILD_WITH_WERROR=OFF
+    -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 )
 
 while [ -n "$1" ] ; do
@@ -131,7 +133,7 @@ if [[ ${enable_all_tests} -eq 1 ]] ; then
         exit 1
     fi
     # This config must be explicitly set to YES/ON in order to be enabled.
-    all_tests_config="-DIRODS_ENABLE_ALL_TESTS=YES"
+    all_tests_config="-DIRODS_ENABLE_ALL_TESTS=YES -DIRODS_UNIT_TESTS_ENABLE_ALL=YES -DIRODS_TEST_EXECUTABLES_BUILD=YES"
 else
     if [[ ${include_unit_tests} -eq 0 ]] ; then
         unit_test_config="-DIRODS_UNIT_TESTS_BUILD=NO -DIRODS_UNIT_TESTS_ENABLE_ALL=NO"
@@ -147,14 +149,60 @@ fi
 
 build_jobs=$(( !build_jobs ? $(nproc) - 1 : build_jobs )) #prevent maxing out CPUs
 
+irods_components=(
+    "icommands"
+    #"auth_kerberos"
+    "auth_pam_interactive"
+    "cap_indexing"
+    #"cap_publishing"
+    "cap_storage_tiering"
+    #"client_cli"
+    #"client_globus"
+    "client_http_api"
+    "client_s3_cpp"
+    "msi_curl"
+    #"suite_netcdf"
+    #"fw_policy_comp"
+    "rs_s3"
+    "re_audit_amqp"
+    "re_logical_quotas"
+    "re_metadata_guard"
+    "re_python"
+    #"re_policy"
+)
+
+declare -A irods_components_opts
+irods_components_opts=(
+    ["icommands"]=""
+    ["auth_kerberos"]=""
+    ["auth_pam_interactive"]=""
+    ["cap_indexing"]=""
+    ["cap_publishing"]=""
+    ["cap_storage_tiering"]=""
+    ["client_cli"]="nopackage"
+    ["client_http_api"]=""
+    ["client_s3_cpp"]=""
+    ["msi_curl"]=""
+    ["suite_netcdf"]=""
+    ["fw_policy_comp"]=""
+    ["rs_s3"]=""
+    ["re_audit_amqp"]=""
+    ["re_logical_quotas"]=""
+    ["re_metadata_guard"]=""
+    ["re_python"]=""
+    ["re_policy"]=""
+)
+
+invalid_component_opt()
+{
+    echo "Invalid component option $@"
+    echo "Valid options are:"
+    echo "    nopackage : use 'all' as default make target intstead of 'package'"
+    exit 65
+} >&2
+
 # skip building iRODS packages if --icommands-only was used
 if [[ ${icommands_only} -eq 0 ]] ; then
-    if [[ ! -d /irods_source ]] ; then
-        # If the source directory does not exist, we clone one from a remote source.
-        git clone "${irods_repo_url}" /irods_source --recurse-submodules
-        cd /irods_source && git checkout "${irods_commitish}" && cd -
-    fi
-
     echo "========================================="
     echo "beginning build of iRODS server"
     echo "========================================="
@@ -172,10 +220,11 @@ if [[ ${icommands_only} -eq 0 ]] ; then
     # Copy packages to mounts
     cp -r /irods_build/*."${file_extension}" /irods_packages/
 
-    # stop if --core-only option was used
-    if [[ ${core_only} -gt 0 ]] ; then
-        exit
-    fi
+fi
+
+# stop if --core-only option was used
+if [[ ${core_only} -gt 0 ]] ; then
+    exit
 fi
 
 # Install packages for building other components
@@ -185,25 +234,38 @@ else
     install_packages /irods_build/irods-{runtime,dev}*."${file_extension}"
 fi
 
-echo "========================================="
-echo "beginning build of iCommands"
-echo "========================================="
+for icomponent in "${irods_components[@]}"; do
+    echo "========================================="
+    echo "beginning build of ${icomponent}"
+    echo "========================================="
 
-if [[ ! -d /icommands_source ]] ; then
-    # If the source directory does not exist, we clone one from a remote source.
-    git clone "${icommands_repo_url}" /icommands_source --recurse-submodules
-    cd /irods_source && git checkout "${icommands_commitish}" && cd -
-fi
+    make_targets="package"
+    nopkgs=""
 
-# Build iCommands
-mkdir -p /icommands_build && cd /icommands_build
-cmake ${make_program_config} ${debug_config} "${common_cmake_args[@]}" ${enable_asan} ${enable_ubsan} ${enable_ubsan_implicit_conversion} /icommands_source
-if [[ -z ${build_jobs} ]] ; then
-    ${make_program} package
-else
-    echo "using [${build_jobs}] threads"
-    ${make_program} -j ${build_jobs} package
-fi
+    if [ -n "${irods_components_opts[$icomponent]}" ] ; then
+        for copt in "${irods_components_opts[$icomponent]}" ; do
+            case "$copt" in
+                nopackage)               make_targets="all"; nopkgs=y;;
+                *)                       invalid_component_opt "$copt";;
+            esac
+        done
+    fi
 
-# Copy packages to mounts
-cp -r /icommands_build/*."${file_extension}" /irods_packages/
+    mkdir -p "/${icomponent}_build" && cd "/${icomponent}_build"
+    cmake ${make_program_config} ${debug_config} "${common_cmake_args[@]}" ${enable_asan} ${enable_ubsan} ${enable_ubsan_implicit_conversion} "/${icomponent}_source"
+
+    # Build component
+    if [[ -z ${build_jobs} ]]; then
+        ${make_program} ${make_targets}
+    else
+        echo "using [${build_jobs}] threads"
+        ${make_program} -j ${build_jobs} ${make_targets}
+    fi
+
+    if [ -z "${nopkgs}" ] ; then
+        # Copy packages to mounts
+        cp -r "/${icomponent}_build/"*."${file_extension}" /irods_packages/
+        # Test install packages
+        #install_packages "/${icomponent}_build/"*."${file_extension}"
+    fi
+done
