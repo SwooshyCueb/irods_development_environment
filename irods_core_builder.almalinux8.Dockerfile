@@ -93,6 +93,7 @@ RUN --mount=type=cache,target=/var/cache/dnf,sharing=locked \
         gcc-toolset-11-libstdc++-devel \
         flex \
         bison \
+        zeromq-devel \
     && \
     rm -rf /tmp/*
 

@@ -43,6 +43,7 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
         libxml2-dev \
         libhdf5-dev \
         libnetcdf-dev \
+        libzmq3-dev \
         lsb-release \
         lsof \
         make \

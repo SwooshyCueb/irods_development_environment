@@ -42,6 +42,7 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
         libssl-dev \
         libsystemd-dev \
         libxml2-dev \
+        libzmq3-dev \
         lsb-release \
         lsof \
         make \

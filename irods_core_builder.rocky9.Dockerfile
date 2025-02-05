@@ -90,6 +90,7 @@ RUN --mount=type=cache,target=/var/cache/dnf,sharing=locked \
         unixODBC-devel \
         flex \
         bison \
+        zeromq-devel \
     && \
     rm -rf /tmp/*
 
