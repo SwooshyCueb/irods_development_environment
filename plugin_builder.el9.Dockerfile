@@ -1,6 +1,7 @@
 # syntax=docker/dockerfile:1.5
 
-FROM rockylinux/rockylinux:9
+ARG builder_base=rockylinux/rockylinux:9
+FROM ${builder_base}
 
 SHELL [ "/usr/bin/bash", "-c" ]
 
