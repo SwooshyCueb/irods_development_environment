@@ -82,10 +82,24 @@ declare -A Os_Map=( ['ubuntu20']='ubuntu:20.04'
                     ['debian11']='debian:11'
                     ['debian12']='debian:12'
                     ['almalinux8']='almalinux:8'
+                    ['almalinux9']='almalinux:9'
+                    ['rocky8']='rockylinux/rockylinux:8'
                     ['rocky9']='rockylinux/rockylinux:9'
                   )
 
+declare -A Dfile_Map=( ['ubuntu20']='ubuntu20'
+                       ['ubuntu22']='ubuntu22'
+                       ['ubuntu24']='ubuntu24'
+                       ['debian11']='debian11'
+                       ['debian12']='debian12'
+                       ['almalinux8']='el8'
+                       ['almalinux9']='el9'
+                       ['rocky8']='el8'
+                       ['rocky9']='el9'
+                     )
+
 base_image=${Os_Map["$OS_NAME"]}
+dfile_os_variant=${Dfile_Map["$OS_NAME"]}
 
 if [ -n "$volumes_file" ]
 then
@@ -127,9 +141,9 @@ DEBUGGER_IMAGE="irods_debuggers.${OS_NAME}"
 BUILDER_IMAGE="irods_core_builder.${OS_NAME}"
 RUNNER_IMAGE="irods_runner.${OS_NAME}"
 
-DEBUGGER_DOCKERFILE="build_debuggers.${OS_NAME}.Dockerfile"
-BUILDER_DOCKERFILE="irods_core_builder.${OS_NAME}.Dockerfile"
-RUNNER_DOCKERFILE="irods_runner.${OS_NAME}.Dockerfile"
+DEBUGGER_DOCKERFILE="build_debuggers.${dfile_os_variant}.Dockerfile"
+BUILDER_DOCKERFILE="irods_core_builder.${dfile_os_variant}.Dockerfile"
+RUNNER_DOCKERFILE="irods_runner.${dfile_os_variant}.Dockerfile"
 
 # get/init runner number
 RUNNER_INT_FILE="${CACHE_DIR}/new_runner_number.${OS_NAME}"
@@ -205,7 +219,7 @@ else
         RUNNER_BASE="${base_image}"
     fi
     if [ -n "$builder_build" ] || [ -n "$do_source_build" ]; then
-        DOCKER_BUILDKIT=1 BUILDKIT_PROGRESS=plain docker build -t "${BUILDER_IMAGE}" -f "${BUILDER_DOCKERFILE}" . ${NO_CACHE}
+        DOCKER_BUILDKIT=1 BUILDKIT_PROGRESS=plain docker build --build-arg builder_base=${base_image} -t "${BUILDER_IMAGE}" -f "${BUILDER_DOCKERFILE}" . ${NO_CACHE}
     fi
     if [ -n "$do_source_build" ]; then
         docker run --rm "${vol_mounts[@]}" -it -e "TERM=$TERM" "${BUILDER_IMAGE}" ${do_source_build:1} ${BUILD_OPTIONS}

@@ -1,6 +1,7 @@
 # syntax=docker/dockerfile:1.5
 
-FROM almalinux:8
+ARG builder_base=almalinux:8
+FROM ${builder_base}
 
 SHELL [ "/usr/bin/bash", "-c" ]
 

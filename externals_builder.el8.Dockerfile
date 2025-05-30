@@ -1,6 +1,7 @@
 # syntax=docker/dockerfile:1.5
 
-FROM rockylinux/rockylinux:9
+ARG builder_base=almalinux:8
+FROM ${builder_base}
 
 SHELL [ "/usr/bin/bash", "-c" ]
 
@@ -13,12 +14,19 @@ RUN --mount=type=cache,target=/var/cache/dnf,sharing=locked \
 RUN --mount=type=cache,target=/var/cache/dnf,sharing=locked \
     --mount=type=cache,target=/var/cache/yum,sharing=locked \
     dnf install -y \
+        dnf-plugins-core \
+    && \
+    dnf config-manager --set-enabled powertools && \
+    rm -rf /tmp/*
+
+RUN --mount=type=cache,target=/var/cache/dnf,sharing=locked \
+    --mount=type=cache,target=/var/cache/yum,sharing=locked \
+    dnf install -y \
         sudo \
         git \
         python3 \
         python3-distro \
         python3-packaging \
-        python3-setuptools \
     && \
     rm -rf /tmp/*
 
@@ -31,6 +39,17 @@ RUN --mount=type=cache,target=/var/cache/dnf,sharing=locked \
     git clone "${externals_repo}" -b "${externals_branch}" /externals && \
     ./install_prerequisites.py && \
     rm -rf /externals /tmp/*
+
+# TODO: The following will enable the newer toolchain on interactive shell logins. The
+# externals builder, however, is not an interactive shell, so this does not execute. This seems
+# like a much better option than explicitly setting the PATH environment variable to check for
+# new thing, as is being done below. Investigate making this effective for this builder.
+#RUN echo "#!/bin/sh" > /etc/profile.d/gcc-toolset-11.sh && \
+#    echo "" >> /etc/profile.d/gcc-toolset-11.sh && \
+#    echo ". /opt/rh/gcc-toolset-11/enable" >> /etc/profile.d/gcc-toolset-11.sh
+
+ENV PATH=/opt/rh/gcc-toolset-11/root/usr/bin:$PATH
+ENV IRODS_EXTERNALS_GCC_PREFIX=/opt/rh/gcc-toolset-11/root/usr
 
 ENV file_extension="rpm"
 ENV package_manager="dnf"
