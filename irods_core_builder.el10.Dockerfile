@@ -38,28 +38,26 @@ RUN --mount=type=cache,target=/var/cache/dnf,sharing=locked \
     && \
     rm -rf /tmp/*
 
-# TODO: irods/irods#7349 - Remove this line once iRODS repository signing keys have been updated.
-RUN update-crypto-policies --set LEGACY
-
-RUN --mount=type=cache,target=/var/cache/dnf,sharing=locked \
-    --mount=type=cache,target=/var/cache/yum,sharing=locked \
-    dnf install -y \
-        dnf-plugin-config-manager \
-    && \
-    rpm --import https://packages.irods.org/irods-signing-key.asc && \
-    dnf config-manager -y --add-repo https://packages.irods.org/renci-irods.yum.repo && \
-    dnf config-manager -y --set-enabled renci-irods && \
-    rpm --import https://core-dev.irods.org/irods-core-dev-signing-key.asc && \
-    dnf config-manager -y --add-repo https://core-dev.irods.org/renci-irods-core-dev.yum.repo && \
-    dnf config-manager -y --set-enabled renci-irods-core-dev && \
-    rm -rf /tmp/*
-
-RUN --mount=type=cache,target=/var/cache/dnf,sharing=locked \
-    --mount=type=cache,target=/var/cache/yum,sharing=locked \
-    dnf install -y \
-        'irods-externals*' \
-    && \
-    rm -rf /tmp/*
+# Uncomment/adjust once externals are present for EL10
+#RUN --mount=type=cache,target=/var/cache/dnf,sharing=locked \
+#    --mount=type=cache,target=/var/cache/yum,sharing=locked \
+#    dnf install -y \
+#        dnf-plugin-config-manager \
+#    && \
+#    rpm --import https://packages.irods.org/irods-signing-key.asc && \
+#    dnf config-manager -y --add-repo https://packages.irods.org/renci-irods.yum.repo && \
+#    dnf config-manager -y --set-enabled renci-irods && \
+#    rpm --import https://core-dev.irods.org/irods-core-dev-signing-key.asc && \
+#    dnf config-manager -y --add-repo https://core-dev.irods.org/renci-irods-core-dev.yum.repo && \
+#    dnf config-manager -y --set-enabled renci-irods-core-dev && \
+#    rm -rf /tmp/*
+#
+#RUN --mount=type=cache,target=/var/cache/dnf,sharing=locked \
+#    --mount=type=cache,target=/var/cache/yum,sharing=locked \
+#    dnf install -y \
+#        'irods-externals*' \
+#    && \
+#    rm -rf /tmp/*
 
 # For rocky linux, the crb repository should be enabled so that certain developer
 # tools such as ninja-build and help2man can be installed.
