@@ -83,8 +83,10 @@ declare -A Os_Map=( ['ubuntu20']='ubuntu:20.04'
                     ['debian12']='debian:12'
                     ['almalinux8']='almalinux:8'
                     ['almalinux9']='almalinux:9'
+                    ['almalinux10']='almalinux:10'
                     ['rocky8']='rockylinux/rockylinux:8'
                     ['rocky9']='rockylinux/rockylinux:9'
+                    ['rocky10']='rockylinux/rockylinux:10'
                   )
 
 declare -A Dfile_Map=( ['ubuntu20']='ubuntu20'
@@ -94,8 +96,10 @@ declare -A Dfile_Map=( ['ubuntu20']='ubuntu20'
                        ['debian12']='debian12'
                        ['almalinux8']='el8'
                        ['almalinux9']='el9'
+                       ['almalinux10']='el10'
                        ['rocky8']='el8'
                        ['rocky9']='el9'
+                       ['rocky10']='el10'
                      )
 
 base_image=${Os_Map["$OS_NAME"]}
