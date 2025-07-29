@@ -68,7 +68,6 @@ RUN --mount=type=cache,target=/var/cache/dnf,sharing=locked \
     dnf install -y \
         dnf-plugins-core \
     && \
-    dnf -y install https://dl.fedoraproject.org/pub/epel/epel-release-latest-9.noarch.rpm && \
     dnf config-manager --set-enabled crb && \
     dnf install -y \
         bzip2-devel \
