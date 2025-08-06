@@ -51,30 +51,19 @@ RUN --mount=type=cache,target=/var/cache/dnf,sharing=locked \
 RUN --mount=type=cache,target=/var/cache/dnf,sharing=locked \
     --mount=type=cache,target=/var/cache/yum,sharing=locked \
     dnf install -y \
-        python3-urllib3 \
         binutils \
+        dnf-plugin-config-manager \
         epel-release \
+        python3-urllib3 \
     && \
+    dnf config-manager --set-enabled crb && \
     rm -rf /tmp/*
 
-# The rr package from github is built for EL8.
-# Due to package dependencies, it can't be installed on EL9.
-# The package from Fedora 38 is very close. We can use it if we update libstdc++ and glibc.
+ARG rr_version="5.9.0"
 
 RUN --mount=type=cache,target=/var/cache/dnf,sharing=locked \
     --mount=type=cache,target=/var/cache/yum,sharing=locked \
-    dnf install -y \
-        "https://archives.fedoraproject.org/pub/archive/fedora/linux/updates/38/Everything/x86_64/Packages/g/glibc-2.37-19.fc38.x86_64.rpm" \
-        "https://archives.fedoraproject.org/pub/archive/fedora/linux/updates/38/Everything/x86_64/Packages/g/glibc-2.37-19.fc38.i686.rpm" \
-        "https://archives.fedoraproject.org/pub/archive/fedora/linux/updates/38/Everything/x86_64/Packages/g/glibc-common-2.37-19.fc38.x86_64.rpm" \
-        "https://archives.fedoraproject.org/pub/archive/fedora/linux/updates/38/Everything/x86_64/Packages/g/glibc-minimal-langpack-2.37-19.fc38.x86_64.rpm" \
-        "https://archives.fedoraproject.org/pub/archive/fedora/linux/updates/38/Everything/x86_64/Packages/g/glibc-devel-2.37-19.fc38.x86_64.rpm" \
-        "https://archives.fedoraproject.org/pub/archive/fedora/linux/updates/38/Everything/x86_64/Packages/g/glibc-headers-x86-2.37-19.fc38.noarch.rpm" \
-        "https://archives.fedoraproject.org/pub/archive/fedora/linux/updates/38/Everything/x86_64/Packages/l/libstdc++-13.2.1-7.fc38.x86_64.rpm" \
-    && \
-    dnf install -y \
-        "https://archives.fedoraproject.org/pub/archive/fedora/linux/updates/38/Everything/x86_64/Packages/r/rr-5.7.0-9.fc38.x86_64.rpm" \
-    && \
+    dnf install -y "https://github.com/rr-debugger/rr/releases/download/${rr_version}/rr-${rr_version}-Linux-x86_64.rpm" && \
     rm -rf /tmp/*
 
 #--------
