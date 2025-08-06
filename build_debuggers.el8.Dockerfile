@@ -43,13 +43,16 @@ RUN --mount=type=cache,target=/var/cache/dnf,sharing=locked \
 RUN --mount=type=cache,target=/var/cache/dnf,sharing=locked \
     --mount=type=cache,target=/var/cache/yum,sharing=locked \
     dnf install -y \
-        python3-urllib3 \
         binutils \
+        dnf-plugin-config-manager \
         epel-release \
+        python3-urllib3 \
     && \
+    dnf config-manager --set-enabled powertools && \
     rm -rf /tmp/*
 
-ARG rr_version="5.7.0"
+# 5.8 is the last published rpm for EL8
+ARG rr_version="5.8.0"
 
 RUN --mount=type=cache,target=/var/cache/dnf,sharing=locked \
     --mount=type=cache,target=/var/cache/yum,sharing=locked \
