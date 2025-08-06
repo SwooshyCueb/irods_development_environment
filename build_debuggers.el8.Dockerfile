@@ -86,7 +86,6 @@ RUN --mount=type=cache,target=/var/cache/dnf,sharing=locked \
         sudo \
         nano \
         vim-enhanced \
-        tmux \
         lsof \
         which \
         file \
