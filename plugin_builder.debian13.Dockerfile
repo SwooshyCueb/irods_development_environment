@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1.5
 
-FROM debian:trixie
+FROM debian:13
 
 SHELL [ "/bin/bash", "-c" ]
 ENV DEBIAN_FRONTEND=noninteractive

@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1.5
 
-ARG debugger_base=debian:trixie
+ARG debugger_base=debian:13
 FROM ${debugger_base}
 
 SHELL [ "/bin/bash", "-c" ]
