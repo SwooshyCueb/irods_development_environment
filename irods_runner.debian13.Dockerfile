@@ -32,7 +32,7 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
         libnss-systemd \
     && \
     apt-get install -y \
-        apt-transport-https \
+        ca-certificates \
         wget \
         lsb-release \
         sudo \
@@ -88,10 +88,32 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     && \
     rm -rf /tmp/*
 
-RUN wget -qO - https://packages.irods.org/irods-signing-key.asc | apt-key add - && \
-    echo "deb [arch=amd64] https://packages.irods.org/apt/ $(lsb_release -sc) main" | tee /etc/apt/sources.list.d/renci-irods.list && \
-    wget -qO - https://core-dev.irods.org/irods-core-dev-signing-key.asc | apt-key add - && \
-    echo "deb [arch=amd64] https://core-dev.irods.org/apt/ $(lsb_release -sc) main" | tee /etc/apt/sources.list.d/renci-irods-core-dev.list
+RUN wget -qO - https://packages.irods.org/irods-signing-key.asc | \
+        gpg \
+            --no-options \
+            --no-default-keyring \
+            --no-auto-check-trustdb \
+            --homedir /dev/null \
+            --no-keyring \
+            --import-options import-export \
+            --output /etc/apt/keyrings/renci-irods-archive-keyring.pgp \
+            --import \
+        && \
+    echo "deb [signed-by=/etc/apt/keyrings/renci-irods-archive-keyring.pgp arch=amd64] https://packages.irods.org/apt/ $(lsb_release -sc) main" | \
+        tee /etc/apt/sources.list.d/renci-irods.list && \
+    wget -qO - https://core-dev.irods.org/irods-core-dev-signing-key.asc | \
+        gpg \
+            --no-options \
+            --no-default-keyring \
+            --no-auto-check-trustdb \
+            --homedir /dev/null \
+            --no-keyring \
+            --import-options import-export \
+            --output /etc/apt/keyrings/renci-irods-core-dev-archive-keyring.pgp \
+            --import \
+        && \
+    echo "deb [signed-by=/etc/apt/keyrings/renci-irods-core-dev-archive-keyring.pgp arch=amd64] https://core-dev.irods.org/apt/ $(lsb_release -sc) main" | \
+        tee /etc/apt/sources.list.d/renci-irods-core-dev.list
 
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt,sharing=locked \
