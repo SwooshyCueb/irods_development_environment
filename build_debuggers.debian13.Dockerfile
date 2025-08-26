@@ -55,7 +55,10 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
 
 ARG rr_version="5.9.0"
 
-RUN wget "https://github.com/rr-debugger/rr/releases/download/${rr_version}/rr-${rr_version}-Linux-x86_64.deb" && \
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    apt-get update && \
+    wget "https://github.com/rr-debugger/rr/releases/download/${rr_version}/rr-${rr_version}-Linux-x86_64.deb" && \
     apt-get install -y "./rr-${rr_version}-Linux-x86_64.deb" && \
     rm -rf /tmp/*
 
