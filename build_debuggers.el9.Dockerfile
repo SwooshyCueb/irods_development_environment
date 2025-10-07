@@ -97,5 +97,8 @@ RUN --mount=type=cache,target=/var/cache/dnf,sharing=locked \
         which \
         file \
         iproute \
+        less \
+        psmisc \
+        procps-ng \
     && \
     rm -rf /tmp/*

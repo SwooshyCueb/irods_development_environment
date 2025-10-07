@@ -108,5 +108,22 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
         coreutils \
         python3-pexpect \
         iproute2 \
+        file \
+        psmisc \
+        procps \
+        less \
     && \
     rm -rf /tmp/*
+
+# Debian does not include glibc-tools (needed for catchsegv)
+# Let's grab it from Ubuntu instead.
+
+ARG glibctools_version="0.0~git3.23fd2b9-0ubuntu1"
+
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    apt-get update && \
+    wget "http://archive.ubuntu.com/ubuntu/pool/universe/g/glibc-tools/glibc-tools_${glibctools_version}_amd64.deb" && \
+    apt-get install -y "./glibc-tools_${glibctools_version}_amd64.deb" && \
+    rm -rf /tmp/*
+

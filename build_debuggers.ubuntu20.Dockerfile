@@ -118,5 +118,10 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
         coreutils \
         python3-pexpect \
         iproute2 \
+        file \
+        psmisc \
+        procps \
+        less \
+        libc-bin \
     && \
     rm -rf /tmp/*
