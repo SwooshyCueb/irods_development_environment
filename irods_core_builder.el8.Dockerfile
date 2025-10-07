@@ -11,12 +11,37 @@ RUN --mount=type=cache,target=/var/cache/dnf,sharing=locked \
     dnf update -y || [ "$?" -eq 100 ] && \
     rm -rf /tmp/*
 
+# Let's get some basics first. Makes it easy to add package repos early.
 RUN --mount=type=cache,target=/var/cache/dnf,sharing=locked \
     --mount=type=cache,target=/var/cache/yum,sharing=locked \
     dnf install -y \
+        ca-certificates \
+        dnf-plugin-config-manager \
+        dnf-plugins-core \
         epel-release \
-        wget \
     && \
+    dnf config-manager --set-enabled powertools && \
+    rm -rf /tmp/*
+
+# Add main iRODS RPM repository
+RUN --mount=type=cache,target=/var/cache/dnf,sharing=locked \
+    --mount=type=cache,target=/var/cache/yum,sharing=locked \
+    rpm --import https://packages.irods.org/irods-signing-key.asc && \
+    dnf config-manager -y --add-repo https://packages.irods.org/renci-irods.yum.repo && \
+    dnf config-manager -y --set-enabled renci-irods
+
+# Add core-dev iRODS RPM repository
+RUN --mount=type=cache,target=/var/cache/dnf,sharing=locked \
+    --mount=type=cache,target=/var/cache/yum,sharing=locked \
+    rpm --import https://core-dev.irods.org/irods-core-dev-signing-key.asc && \
+    dnf config-manager -y --add-repo https://core-dev.irods.org/renci-irods-core-dev.yum.repo && \
+    dnf config-manager -y --set-enabled renci-irods-core-dev && \
+    rm -rf /tmp/*
+
+# Install updates from new repositories.
+RUN --mount=type=cache,target=/var/cache/dnf,sharing=locked \
+    --mount=type=cache,target=/var/cache/yum,sharing=locked \
+    dnf update -y || [ "$?" -eq 100 ] && \
     rm -rf /tmp/*
 
 RUN --mount=type=cache,target=/var/cache/dnf,sharing=locked \
@@ -35,42 +60,15 @@ RUN --mount=type=cache,target=/var/cache/dnf,sharing=locked \
         lsof \
         postgresql-server \
         unixODBC-devel \
+        wget \
         which \
-    && \
-    rm -rf /tmp/*
-
-RUN --mount=type=cache,target=/var/cache/dnf,sharing=locked \
-    --mount=type=cache,target=/var/cache/yum,sharing=locked \
-    dnf install -y \
-        dnf-plugin-config-manager \
-    && \
-    rpm --import https://packages.irods.org/irods-signing-key.asc && \
-    dnf config-manager -y --add-repo https://packages.irods.org/renci-irods.yum.repo && \
-    dnf config-manager -y --set-enabled renci-irods && \
-    rpm --import https://core-dev.irods.org/irods-core-dev-signing-key.asc && \
-    dnf config-manager -y --add-repo https://core-dev.irods.org/renci-irods-core-dev.yum.repo && \
-    dnf config-manager -y --set-enabled renci-irods-core-dev && \
-    rm -rf /tmp/*
-
-RUN --mount=type=cache,target=/var/cache/dnf,sharing=locked \
-    --mount=type=cache,target=/var/cache/yum,sharing=locked \
-    dnf install -y \
-        'irods-externals*' \
     && \
     rm -rf /tmp/*
 
 # NOTE: This step cannot be combined with the installation step(s) above. Certain packages will
 # not be installed until certain other packages are installed. It's very sad and confusing.
-#
-# For almalinux:8, the powertools repository should be enabled so that certain developer
-# tools such as ninja-build and help2man can be installed.
 RUN --mount=type=cache,target=/var/cache/dnf,sharing=locked \
     --mount=type=cache,target=/var/cache/yum,sharing=locked \
-    dnf install -y \
-        dnf-plugins-core \
-    && \
-    dnf config-manager --set-enabled powertools \
-    && \
     dnf install -y \
         git \
         pam-devel \
@@ -103,7 +101,6 @@ RUN --mount=type=cache,target=/var/cache/dnf,sharing=locked \
     --mount=type=cache,target=/root/.cache/wheel,sharing=locked \
     dnf install -y \
         python3-pip \
-        cmake \
         spdlog-devel \
     && \
     python3 -m pip install \
@@ -117,6 +114,13 @@ RUN --mount=type=cache,target=/var/cache/dnf,sharing=locked \
             --global-option="--lief-no-vdex" \
             --global-option="--lief-no-oat" \
             --global-option="--lief-no-dex" \
+    && \
+    rm -rf /tmp/*
+
+RUN --mount=type=cache,target=/var/cache/dnf,sharing=locked \
+    --mount=type=cache,target=/var/cache/yum,sharing=locked \
+    dnf install -y \
+        'irods-externals*' \
     && \
     rm -rf /tmp/*
 

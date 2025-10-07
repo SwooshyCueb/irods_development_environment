@@ -11,12 +11,37 @@ RUN --mount=type=cache,target=/var/cache/dnf,sharing=locked \
     dnf update -y || [ "$?" -eq 100 ] && \
     rm -rf /tmp/*
 
+# Let's get some basics first. Makes it easy to add package repos early.
 RUN --mount=type=cache,target=/var/cache/dnf,sharing=locked \
     --mount=type=cache,target=/var/cache/yum,sharing=locked \
     dnf install -y \
+        ca-certificates \
+        dnf-plugin-config-manager \
+        dnf-plugins-core \
         epel-release \
-        wget \
     && \
+    dnf config-manager --set-enabled crb && \
+    rm -rf /tmp/*
+
+# Add main iRODS RPM repository
+RUN --mount=type=cache,target=/var/cache/dnf,sharing=locked \
+    --mount=type=cache,target=/var/cache/yum,sharing=locked \
+    rpm --import https://packages.irods.org/irods-signing-key.asc && \
+    dnf config-manager -y --add-repo https://packages.irods.org/renci-irods.yum.repo && \
+    dnf config-manager -y --set-enabled renci-irods
+
+# Add core-dev iRODS RPM repository
+RUN --mount=type=cache,target=/var/cache/dnf,sharing=locked \
+    --mount=type=cache,target=/var/cache/yum,sharing=locked \
+    rpm --import https://core-dev.irods.org/irods-core-dev-signing-key.asc && \
+    dnf config-manager -y --add-repo https://core-dev.irods.org/renci-irods-core-dev.yum.repo && \
+    dnf config-manager -y --set-enabled renci-irods-core-dev && \
+    rm -rf /tmp/*
+
+# Install updates from new repositories.
+RUN --mount=type=cache,target=/var/cache/dnf,sharing=locked \
+    --mount=type=cache,target=/var/cache/yum,sharing=locked \
+    dnf update -y || [ "$?" -eq 100 ] && \
     rm -rf /tmp/*
 
 RUN --mount=type=cache,target=/var/cache/dnf,sharing=locked \
@@ -34,41 +59,13 @@ RUN --mount=type=cache,target=/var/cache/dnf,sharing=locked \
         python3-psutil \
         python3-pyodbc \
         python3-requests \
+        wget \
         which \
     && \
     rm -rf /tmp/*
 
-# TODO: irods/irods#7349 - Remove this line once iRODS repository signing keys have been updated.
-RUN update-crypto-policies --set LEGACY
-
 RUN --mount=type=cache,target=/var/cache/dnf,sharing=locked \
     --mount=type=cache,target=/var/cache/yum,sharing=locked \
-    dnf install -y \
-        dnf-plugin-config-manager \
-    && \
-    rpm --import https://packages.irods.org/irods-signing-key.asc && \
-    dnf config-manager -y --add-repo https://packages.irods.org/renci-irods.yum.repo && \
-    dnf config-manager -y --set-enabled renci-irods && \
-    rpm --import https://core-dev.irods.org/irods-core-dev-signing-key.asc && \
-    dnf config-manager -y --add-repo https://core-dev.irods.org/renci-irods-core-dev.yum.repo && \
-    dnf config-manager -y --set-enabled renci-irods-core-dev && \
-    rm -rf /tmp/*
-
-RUN --mount=type=cache,target=/var/cache/dnf,sharing=locked \
-    --mount=type=cache,target=/var/cache/yum,sharing=locked \
-    dnf install -y \
-        'irods-externals*' \
-    && \
-    rm -rf /tmp/*
-
-# For rocky linux, the crb repository should be enabled so that certain developer
-# tools such as ninja-build and help2man can be installed.
-RUN --mount=type=cache,target=/var/cache/dnf,sharing=locked \
-    --mount=type=cache,target=/var/cache/yum,sharing=locked \
-    dnf install -y \
-        dnf-plugins-core \
-    && \
-    dnf config-manager --set-enabled crb && \
     dnf install -y \
         bzip2-devel \
         catch2-devel \
@@ -116,6 +113,13 @@ RUN --mount=type=cache,target=/var/cache/dnf,sharing=locked \
             --global-option="--lief-no-vdex" \
             --global-option="--lief-no-oat" \
             --global-option="--lief-no-dex" \
+    && \
+    rm -rf /tmp/*
+
+RUN --mount=type=cache,target=/var/cache/dnf,sharing=locked \
+    --mount=type=cache,target=/var/cache/yum,sharing=locked \
+    dnf install -y \
+        'irods-externals*' \
     && \
     rm -rf /tmp/*
 

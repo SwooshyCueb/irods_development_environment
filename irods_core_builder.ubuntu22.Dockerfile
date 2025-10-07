@@ -19,21 +19,68 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
 # To mark all installed packages as manually installed:
 #apt-mark showauto | xargs -r apt-mark manual
 
+# Let's get some basics first. Makes it easy to add package repos early.
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt,sharing=locked \
-    --mount=type=cache,target=/root/.cache/pip,sharing=locked \
-    --mount=type=cache,target=/root/.cache/wheel,sharing=locked \
+    mkdir -p /etc/apt/keyrings \
     apt-get update && \
     apt-get install -y \
         apt-transport-https \
         ca-certificates \
+        gnupg \
+        lsb-release \
+        wget \
+    && \
+    rm -rf /tmp/*
+
+# Add main iRODS apt repository
+RUN wget -qO - https://packages.irods.org/irods-signing-key.asc | \
+        gpg \
+            --no-options \
+            --no-default-keyring \
+            --no-auto-check-trustdb \
+            --homedir /dev/null \
+            --no-keyring \
+            --import-options import-export \
+            --output /etc/apt/keyrings/renci-irods-archive-keyring.pgp \
+            --import \
+        && \
+    echo "deb [signed-by=/etc/apt/keyrings/renci-irods-archive-keyring.pgp arch=amd64] https://packages.irods.org/apt/ $(lsb_release -sc) main" | \
+        tee /etc/apt/sources.list.d/renci-irods.list
+
+# Add core-dev iRODS apt repository
+RUN wget -qO - https://core-dev.irods.org/irods-core-dev-signing-key.asc | \
+        gpg \
+            --no-options \
+            --no-default-keyring \
+            --no-auto-check-trustdb \
+            --homedir /dev/null \
+            --no-keyring \
+            --import-options import-export \
+            --output /etc/apt/keyrings/renci-irods-core-dev-archive-keyring.pgp \
+            --import \
+        && \
+    echo "deb [signed-by=/etc/apt/keyrings/renci-irods-core-dev-archive-keyring.pgp arch=amd64] https://core-dev.irods.org/apt/ $(lsb_release -sc) main" | \
+        tee /etc/apt/sources.list.d/renci-irods-core-dev.list
+
+# Install updates from new repositories.
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    apt-get update && \
+    apt-get upgrade -y && \
+    apt-get autoremove -y --purge && \
+    rm -rf /tmp/*
+
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    apt-get update && \
+    apt-get install -y \
         catch2 \
         ccache \
         cmake \
         g++ \
         gcc \
         git \
-        gnupg \
         help2man \
         libarchive-dev \
         libbz2-dev \
@@ -47,7 +94,6 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
         libssl-dev \
         libsystemd-dev \
         libxml2-dev \
-        lsb-release \
         lsof \
         make \
         ninja-build \
@@ -56,7 +102,6 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
         postgresql \
         python3 \
         python3-dev \
-        python3-pip \
         python3-distro \
         python3-jsonschema \
         python3-packaging \
@@ -66,41 +111,22 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
         sudo \
         super \
         unixodbc-dev \
-        wget \
         zlib1g-dev \
         flex \
         bison \
     && \
-    python3 -m pip install lief && \
     rm -rf /tmp/*
 
-RUN mkdir -p /etc/apt/keyrings && \
-    wget -qO - https://packages.irods.org/irods-signing-key.asc | \
-        gpg \
-            --no-options \
-            --no-default-keyring \
-            --no-auto-check-trustdb \
-            --homedir /dev/null \
-            --no-keyring \
-            --import-options import-export \
-            --output /etc/apt/keyrings/renci-irods-archive-keyring.pgp \
-            --import \
-        && \
-    echo "deb [signed-by=/etc/apt/keyrings/renci-irods-archive-keyring.pgp arch=amd64] https://packages.irods.org/apt/ $(lsb_release -sc) main" | \
-        tee /etc/apt/sources.list.d/renci-irods.list && \
-    wget -qO - https://core-dev.irods.org/irods-core-dev-signing-key.asc | \
-        gpg \
-            --no-options \
-            --no-default-keyring \
-            --no-auto-check-trustdb \
-            --homedir /dev/null \
-            --no-keyring \
-            --import-options import-export \
-            --output /etc/apt/keyrings/renci-irods-core-dev-archive-keyring.pgp \
-            --import \
-        && \
-    echo "deb [signed-by=/etc/apt/keyrings/renci-irods-core-dev-archive-keyring.pgp arch=amd64] https://core-dev.irods.org/apt/ $(lsb_release -sc) main" | \
-        tee /etc/apt/sources.list.d/renci-irods-core-dev.list
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    --mount=type=cache,target=/root/.cache/pip,sharing=locked \
+    --mount=type=cache,target=/root/.cache/wheel,sharing=locked \
+    apt-get update && \
+    apt-get install -y \
+        python3-pip \
+    && \
+    pip3 install lief && \
+    rm -rf /tmp/*
 
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt,sharing=locked \

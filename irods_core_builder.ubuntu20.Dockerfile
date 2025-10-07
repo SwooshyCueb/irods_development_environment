@@ -19,60 +19,22 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
 # To mark all installed packages as manually installed:
 #apt-mark showauto | xargs -r apt-mark manual
 
+# Let's get some basics first. Makes it easy to add package repos early.
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt,sharing=locked \
-    --mount=type=cache,target=/root/.cache/pip,sharing=locked \
-    --mount=type=cache,target=/root/.cache/wheel,sharing=locked \
+    mkdir -p /etc/apt/keyrings \
     apt-get update && \
     apt-get install -y \
         apt-transport-https \
         ca-certificates \
-        ccache \
-        cmake \
-        g++-10 \
-        gcc \
-        gcc-10 \
-        git \
         gnupg \
-        help2man \
-        libarchive-dev \
-        libbz2-dev \
-        libcurl4-gnutls-dev \
-        libfuse-dev \
-        libjson-perl \
-        libkrb5-dev \
-        libpam0g-dev \
-        libssl-dev \
-        libsystemd-dev \
-        libxml2-dev \
         lsb-release \
-        lsof \
-        make \
-        ninja-build \
-        odbc-postgresql \
-        postgresql \
-        python3 \
-        python3-dev \
-        python3-pip \
-        python3-distro \
-        python3-jsonschema \
-        python3-packaging \
-        python3-psutil \
-        python3-pyodbc \
-        python3-requests \
-        sudo \
-        super \
-        unixodbc-dev \
         wget \
-        zlib1g-dev \
-        flex \
-        bison \
     && \
-    pip3 install lief && \
     rm -rf /tmp/*
 
-RUN mkdir -p /etc/apt/keyrings && \
-    wget -qO - https://packages.irods.org/irods-signing-key.asc | \
+# Add main iRODS apt repository
+RUN wget -qO - https://packages.irods.org/irods-signing-key.asc | \
         gpg \
             --no-options \
             --no-default-keyring \
@@ -84,8 +46,10 @@ RUN mkdir -p /etc/apt/keyrings && \
             --import \
         && \
     echo "deb [signed-by=/etc/apt/keyrings/renci-irods-archive-keyring.pgp arch=amd64] https://packages.irods.org/apt/ $(lsb_release -sc) main" | \
-        tee /etc/apt/sources.list.d/renci-irods.list && \
-    wget -qO - https://core-dev.irods.org/irods-core-dev-signing-key.asc | \
+        tee /etc/apt/sources.list.d/renci-irods.list
+
+# Add core-dev iRODS apt repository
+RUN wget -qO - https://core-dev.irods.org/irods-core-dev-signing-key.asc | \
         gpg \
             --no-options \
             --no-default-keyring \
@@ -98,6 +62,68 @@ RUN mkdir -p /etc/apt/keyrings && \
         && \
     echo "deb [signed-by=/etc/apt/keyrings/renci-irods-core-dev-archive-keyring.pgp arch=amd64] https://core-dev.irods.org/apt/ $(lsb_release -sc) main" | \
         tee /etc/apt/sources.list.d/renci-irods-core-dev.list
+
+# Install updates from new repositories.
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    apt-get update && \
+    apt-get upgrade -y && \
+    apt-get autoremove -y --purge && \
+    rm -rf /tmp/*
+
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    apt-get update && \
+    apt-get install -y \
+        ccache \
+        cmake \
+        g++-10 \
+        gcc \
+        gcc-10 \
+        git \
+        help2man \
+        libarchive-dev \
+        libbz2-dev \
+        libcurl4-gnutls-dev \
+        libfuse-dev \
+        libjson-perl \
+        libkrb5-dev \
+        libpam0g-dev \
+        libssl-dev \
+        libsystemd-dev \
+        libxml2-dev \
+        lsof \
+        make \
+        ninja-build \
+        odbc-postgresql \
+        postgresql \
+        python3 \
+        python3-dev \
+        python3-distro \
+        python3-jsonschema \
+        python3-packaging \
+        python3-psutil \
+        python3-pyodbc \
+        python3-requests \
+        sudo \
+        super \
+        unixodbc-dev \
+        zlib1g-dev \
+        flex \
+        bison \
+    && \
+    rm -rf /tmp/*
+
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    --mount=type=cache,target=/root/.cache/pip,sharing=locked \
+    --mount=type=cache,target=/root/.cache/wheel,sharing=locked \
+    apt-get update && \
+    apt-get install -y \
+        python3-pip \
+    && \
+    pip3 install lief && \
+    rm -rf /tmp/*
 
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt,sharing=locked \

@@ -13,18 +13,42 @@ RUN --mount=type=cache,target=/var/cache/dnf,sharing=locked \
     dnf update -y || [ "$?" -eq 100 ] && \
     rm -rf /tmp/*
 
+# Let's get some basics first. Makes it easy to add package repos early.
 RUN --mount=type=cache,target=/var/cache/dnf,sharing=locked \
     --mount=type=cache,target=/var/cache/yum,sharing=locked \
     dnf install -y \
+        ca-certificates \
+        dnf-plugin-config-manager \
         epel-release \
-        sudo \
-        wget \
     && \
     rm -rf /tmp/*
 
+# Add main iRODS RPM repository
+RUN --mount=type=cache,target=/var/cache/dnf,sharing=locked \
+    --mount=type=cache,target=/var/cache/yum,sharing=locked \
+    rpm --import https://packages.irods.org/irods-signing-key.asc && \
+    dnf config-manager -y --add-repo https://packages.irods.org/renci-irods.yum.repo && \
+    dnf config-manager -y --set-enabled renci-irods
+
+# Add core-dev iRODS RPM repository
+RUN --mount=type=cache,target=/var/cache/dnf,sharing=locked \
+    --mount=type=cache,target=/var/cache/yum,sharing=locked \
+    rpm --import https://core-dev.irods.org/irods-core-dev-signing-key.asc && \
+    dnf config-manager -y --add-repo https://core-dev.irods.org/renci-irods-core-dev.yum.repo && \
+    dnf config-manager -y --set-enabled renci-irods-core-dev && \
+    rm -rf /tmp/*
+
+# Install updates from new repositories.
+RUN --mount=type=cache,target=/var/cache/dnf,sharing=locked \
+    --mount=type=cache,target=/var/cache/yum,sharing=locked \
+    dnf update -y || [ "$?" -eq 100 ] && \
+    rm -rf /tmp/*
+
+# More dependencies
 RUN --mount=type=cache,target=/var/cache/dnf,sharing=locked \
     --mount=type=cache,target=/var/cache/yum,sharing=locked \
     dnf install -y \
+        sudo \
         python3 \
         python3-distro \
         python3-jsonschema \
@@ -36,6 +60,7 @@ RUN --mount=type=cache,target=/var/cache/dnf,sharing=locked \
         lsof \
         postgresql-server \
         unixODBC \
+        wget \
     && \
     rm -rf /tmp/*
 
@@ -53,6 +78,24 @@ RUN --mount=type=cache,target=/var/cache/dnf,sharing=locked \
 COPY irods.rsyslog /etc/rsyslog.d/00-irods.conf
 COPY irods.logrotate /etc/logrotate.d/irods
 
+# Install some useful utilities
+RUN --mount=type=cache,target=/var/cache/dnf,sharing=locked \
+    --mount=type=cache,target=/var/cache/yum,sharing=locked \
+    dnf install -y \
+        git \
+        vim \
+        nano \
+    && \
+    rm -rf /tmp/*
+
+# Install irods externals
+RUN --mount=type=cache,target=/var/cache/dnf,sharing=locked \
+    --mount=type=cache,target=/var/cache/yum,sharing=locked \
+    dnf install -y \
+        'irods-externals*' \
+    && \
+    rm -rf /tmp/*
+
 # irodsauthuser required for some tests
 # UID and GID ranges picked to hopefully not overlap with anything
 RUN useradd \
@@ -64,26 +107,6 @@ RUN useradd \
         --shell /bin/bash \
         irodsauthuser && \
     echo 'irodsauthuser:;=iamnotasecret' | chpasswd
-
-RUN --mount=type=cache,target=/var/cache/dnf,sharing=locked \
-    --mount=type=cache,target=/var/cache/yum,sharing=locked \
-    dnf install -y \
-        dnf-plugin-config-manager \
-    && \
-    rpm --import https://packages.irods.org/irods-signing-key.asc && \
-    dnf config-manager -y --add-repo https://packages.irods.org/renci-irods.yum.repo && \
-    dnf config-manager -y --set-enabled renci-irods && \
-    rpm --import https://core-dev.irods.org/irods-core-dev-signing-key.asc && \
-    dnf config-manager -y --add-repo https://core-dev.irods.org/renci-irods-core-dev.yum.repo && \
-    dnf config-manager -y --set-enabled renci-irods-core-dev && \
-    rm -rf /tmp/*
-
-RUN --mount=type=cache,target=/var/cache/dnf,sharing=locked \
-    --mount=type=cache,target=/var/cache/yum,sharing=locked \
-    dnf install -y \
-        'irods-externals*' \
-    && \
-    rm -rf /tmp/*
 
 # Disable unwanted systemd units, set default target
 RUN find /etc/systemd/system \

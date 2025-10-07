@@ -22,6 +22,59 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
 # To mark all installed packages as manually installed:
 #apt-mark showauto | xargs -r apt-mark manual
 
+# Let's get some basics first. Makes it easy to add package repos early.
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    mkdir -p /etc/apt/keyrings \
+    apt-get update && \
+    apt-get install -y \
+        apt-transport-https \
+        ca-certificates \
+        gnupg \
+        lsb-release \
+        wget \
+    && \
+    rm -rf /tmp/*
+
+# Add main iRODS apt repository
+RUN wget -qO - https://packages.irods.org/irods-signing-key.asc | \
+        gpg \
+            --no-options \
+            --no-default-keyring \
+            --no-auto-check-trustdb \
+            --homedir /dev/null \
+            --no-keyring \
+            --import-options import-export \
+            --output /etc/apt/keyrings/renci-irods-archive-keyring.pgp \
+            --import \
+        && \
+    echo "deb [signed-by=/etc/apt/keyrings/renci-irods-archive-keyring.pgp arch=amd64] https://packages.irods.org/apt/ $(lsb_release -sc) main" | \
+        tee /etc/apt/sources.list.d/renci-irods.list
+
+# Add core-dev iRODS apt repository
+RUN wget -qO - https://core-dev.irods.org/irods-core-dev-signing-key.asc | \
+        gpg \
+            --no-options \
+            --no-default-keyring \
+            --no-auto-check-trustdb \
+            --homedir /dev/null \
+            --no-keyring \
+            --import-options import-export \
+            --output /etc/apt/keyrings/renci-irods-core-dev-archive-keyring.pgp \
+            --import \
+        && \
+    echo "deb [signed-by=/etc/apt/keyrings/renci-irods-core-dev-archive-keyring.pgp arch=amd64] https://core-dev.irods.org/apt/ $(lsb_release -sc) main" | \
+        tee /etc/apt/sources.list.d/renci-irods-core-dev.list
+
+# Install updates from new repositories.
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    apt-get update && \
+    apt-get upgrade -y && \
+    apt-get autoremove -y --purge && \
+    rm -rf /tmp/*
+
+# More dependencies
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt,sharing=locked \
     apt-get update && \
@@ -32,14 +85,8 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
         libnss-systemd \
     && \
     apt-get install -y \
-        apt-transport-https \
-        ca-certificates \
-        wget \
-        lsb-release \
         sudo \
-        gnupg \
         procps \
-        rsyslog \
         python3 \
         python3-psutil \
         python3-requests \
@@ -66,6 +113,26 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
 COPY irods.rsyslog /etc/rsyslog.d/00-irods.conf
 COPY irods.logrotate /etc/logrotate.d/irods
 
+# Install some useful utilities
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    apt-get update && \
+    apt-get install -y \
+        git \
+        vim \
+        nano \
+    && \
+    rm -rf /tmp/*
+
+# Install irods externals
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    apt-get update && \
+    apt-get install -y \
+        'irods-externals*' \
+    && \
+    rm -rf /tmp/*
+
 # irodsauthuser required for some tests
 # UID and GID ranges picked to hopefully not overlap with anything
 RUN useradd \
@@ -77,53 +144,6 @@ RUN useradd \
         --shell /bin/bash \
         irodsauthuser && \
     echo 'irodsauthuser:;=iamnotasecret' | chpasswd
-
-RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
-    --mount=type=cache,target=/var/lib/apt,sharing=locked \
-    apt-get update && \
-    apt-get install -y \
-        git \
-        vim \
-        nano \
-        rsyslog \
-    && \
-    rm -rf /tmp/*
-
-RUN mkdir -p /etc/apt/keyrings && \
-    wget -qO - https://packages.irods.org/irods-signing-key.asc | \
-        gpg \
-            --no-options \
-            --no-default-keyring \
-            --no-auto-check-trustdb \
-            --homedir /dev/null \
-            --no-keyring \
-            --import-options import-export \
-            --output /etc/apt/keyrings/renci-irods-archive-keyring.pgp \
-            --import \
-        && \
-    echo "deb [signed-by=/etc/apt/keyrings/renci-irods-archive-keyring.pgp arch=amd64] https://packages.irods.org/apt/ $(lsb_release -sc) main" | \
-        tee /etc/apt/sources.list.d/renci-irods.list && \
-    wget -qO - https://core-dev.irods.org/irods-core-dev-signing-key.asc | \
-        gpg \
-            --no-options \
-            --no-default-keyring \
-            --no-auto-check-trustdb \
-            --homedir /dev/null \
-            --no-keyring \
-            --import-options import-export \
-            --output /etc/apt/keyrings/renci-irods-core-dev-archive-keyring.pgp \
-            --import \
-        && \
-    echo "deb [signed-by=/etc/apt/keyrings/renci-irods-core-dev-archive-keyring.pgp arch=amd64] https://core-dev.irods.org/apt/ $(lsb_release -sc) main" | \
-        tee /etc/apt/sources.list.d/renci-irods-core-dev.list
-
-RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
-    --mount=type=cache,target=/var/lib/apt,sharing=locked \
-    apt-get update && \
-    apt-get install -y \
-        'irods-externals*' \
-    && \
-    rm -rf /tmp/*
 
 # Disable unwanted systemd units, set default target
 RUN find /etc/systemd/system \
