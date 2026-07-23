@@ -78,6 +78,7 @@ done
 
 declare -A Os_Map=( ['ubuntu22']='ubuntu:22.04'
                     ['ubuntu24']='ubuntu:24.04'
+                    ['ubuntu26']='ubuntu:26.04'
                     ['debian12']='debian:12'
                     ['debian13']='debian:13'
                     ['almalinux9']='almalinux:9'
@@ -88,6 +89,7 @@ declare -A Os_Map=( ['ubuntu22']='ubuntu:22.04'
 
 declare -A Dfile_Map=( ['ubuntu22']='ubuntu22'
                        ['ubuntu24']='ubuntu24'
+                       ['ubuntu26']='ubuntu26'
                        ['debian12']='debian12'
                        ['debian13']='debian13'
                        ['almalinux9']='el9'
