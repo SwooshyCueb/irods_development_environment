@@ -76,8 +76,7 @@ while [[ $1 = -* ]]; do
     shift
 done
 
-declare -A Os_Map=( ['ubuntu20']='ubuntu:20.04'
-                    ['ubuntu22']='ubuntu:22.04'
+declare -A Os_Map=( ['ubuntu22']='ubuntu:22.04'
                     ['ubuntu24']='ubuntu:24.04'
                     ['debian12']='debian:12'
                     ['debian13']='debian:13'
@@ -87,8 +86,7 @@ declare -A Os_Map=( ['ubuntu20']='ubuntu:20.04'
                     ['rocky10']='rockylinux/rockylinux:10'
                   )
 
-declare -A Dfile_Map=( ['ubuntu20']='ubuntu20'
-                       ['ubuntu22']='ubuntu22'
+declare -A Dfile_Map=( ['ubuntu22']='ubuntu22'
                        ['ubuntu24']='ubuntu24'
                        ['debian12']='debian12'
                        ['debian13']='debian13'
